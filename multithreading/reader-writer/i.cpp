@@ -2,73 +2,73 @@
 
 
 
-#include <iostream>
-#include <vector>
-#include <string>
-#include <bits/stdc++.h>
-#include <mutex>
-#include <condition_variable>
-#include <thread>
-using namespace std;
+// #include <iostream>
+// #include <vector>
+// #include <string>
+// #include <bits/stdc++.h>
+// #include <mutex>
+// #include <condition_variable>
+// #include <thread>
+// using namespace std;
 
-std::vector<std::string> logbook;
-mutex mx;
-condition_variable cv;
-bool writerFlag=false;
-int readerCount = 0;
+// std::vector<std::string> logbook;
+// mutex mx;
+// condition_variable cv;
+// bool writerFlag=false;
+// int readerCount = 0;
 
-void writer_function(int writer_id, const std::string& message) {
-    unique_lock<mutex> lock(mx);
-    cv.wait(lock,[](){return !writerFlag && readerCount == 0;} );
-    writerFlag =true;
-    logbook.push_back(message);
-    std::cout << "Writer " << writer_id << ": Wrote log \"" << message 
-              << "\" at index " << logbook.size() - 1 << std::endl;
-    writerFlag=false;
-    lock.unlock();
-    cv.notify_all();
-}
+// void writer_function(int writer_id, const std::string& message) {
+//     unique_lock<mutex> lock(mx);
+//     cv.wait(lock,[](){return !writerFlag && readerCount == 0;} );
+//     writerFlag =true;
+//     logbook.push_back(message);
+//     std::cout << "Writer " << writer_id << ": Wrote log \"" << message 
+//               << "\" at index " << logbook.size() - 1 << std::endl;
+//     writerFlag=false;
+//     lock.unlock();
+//     cv.notify_all();
+// }
 
-void reader_function(int reader_id) {
+// void reader_function(int reader_id) {
 
-    {
-        unique_lock<mutex>lock(mx);
-        cv.wait(lock,[](){return !writerFlag;});
-        readerCount++;
-    }
-    
-    std::cout << "Reader " << reader_id << ": Reading logs" << std::endl;
-    for (size_t i = 0; i < logbook.size(); ++i) {
-        std::cout << "  Reader " << reader_id << ": Log " << i 
-                  << " => " << logbook[i] << std::endl;
-    }
-    {
-        unique_lock<mutex>lock(mx);
-        readerCount--;
-        if(readerCount==0)
-        lock.unlock();
-        cv.notify_all();
-    }
-    
+//     {
+//         unique_lock<mutex>lock(mx);
+//         cv.wait(lock,[](){return !writerFlag;});
+//         readerCount++;
+//     }
+	
+//     std::cout << "Reader " << reader_id << ": Reading logs" << std::endl;
+//     for (size_t i = 0; i < logbook.size(); ++i) {
+//         std::cout << "  Reader " << reader_id << ": Log " << i 
+//                   << " => " << logbook[i] << std::endl;
+//     }
+//     {
+//         unique_lock<mutex>lock(mx);
+//         readerCount--;
+//         if(readerCount==0)
+//         lock.unlock();
+//         cv.notify_all();
+//     }
+	
 
-}
+// }
 
-int main() {
-    int writerThread = 5;
-    int readerThread = 3;
-    vector<thread>threads;
+// int main() {
+//     int writerThread = 5;
+//     int readerThread = 3;
+//     vector<thread>threads;
 
-    for(int i=0;i<writerThread;i++) {
-        threads.emplace_back(thread(writer_function,i,"Task is done by writer thread " + to_string(i)));
-    }
-    for(int i=0;i<readerThread;i++) {
-        threads.emplace_back(thread(reader_function, i));
-    }
+//     for(int i=0;i<writerThread;i++) {
+//         threads.emplace_back(thread(writer_function,i,"Task is done by writer thread " + to_string(i)));
+//     }
+//     for(int i=0;i<readerThread;i++) {
+//         threads.emplace_back(thread(reader_function, i));
+//     }
 
-    for(auto& t : threads) {
-        t.join();
-    }
-}
+//     for(auto& t : threads) {
+//         t.join();
+//     }
+// }
 
 // Shared mutex after c++ 17 is a library where it allows shared access over resources when shared_lock is used and for unique
 //  access it can go with unique lock
@@ -186,3 +186,53 @@ int main() {
 
 //     return 0;
 // }
+
+
+// Write priority reader-writer
+#include <bits/stdc++.h>
+#include <mutex>
+#include <condition_variable>
+
+using namespace std;
+
+class ReaderWriter 
+{
+	public : 
+	
+	vector<string>logs;
+	mutex mx;
+	condition_variable cv;
+	int readerCount = 0;
+	int writerCount = 0;
+	int writerActive = 0;
+	int readerActive = 0;
+	void writer_function(int writer_id, const std::string& message) 
+	{
+		
+		unique_lock<mutex>lock(mx);
+		writerActive++;
+		cv.wait(lock, [this](){return readerCount==0 && activeWriters;});
+		writerActive--;
+		writerCount++;
+		logs.push_back(message);
+		cout<<"Writer with id: "<<writer_id<<" writing"<<endl;
+		writerCount--;
+		cv.notify_all();
+		
+	}
+	void reader_function(int reader_id) 
+	{
+		
+		{
+		unique_lock<mutex>lock(mx);
+		cv.wait(lock, [this](){return !writerCount && !writerActive;});
+		
+		readerCount++;
+		for(string& message : logs) 
+			{
+				cout<<"reader with id: "<<reader_id<<" have read message: "<<message<<endl;
+			}
+		}
+		readerCount--;
+	}
+};
