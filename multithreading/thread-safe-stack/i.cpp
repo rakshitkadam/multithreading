@@ -5,92 +5,87 @@
 #include<atomic>
 using namespace std;
 
+// template<typename T>
+// class ThreadSafeStack {
+// private:
+//     struct Node {
+//         T data;
+//         Node* next;
+//         Node(const T& value) : data(value), next(nullptr) {}
+//     };
+
+//     Node* head;
+//     mutable std::mutex mx;
+//     std::condition_variable cv;
+//     std::atomic<size_t> sizee;
+
+// public:
+//     ThreadSafeStack() : head(nullptr), sizee(0) {}
+
+//     ~ThreadSafeStack() {
+//         std::lock_guard<std::mutex> lock(mx);
+//         while (head) {
+//             Node* tmp = head;
+//             head = head->next;
+//             delete tmp;
+//         }
+//     }
+
+//     void push(const T& value) {
+//         Node* newNode = new Node(value);
+//         {
+//             std::lock_guard<std::mutex> lock(mx);
+//             newNode->next = head;
+//             head = newNode;
+//             sizee.fetch_add(1, std::memory_order_release);
+//         }
+//         cv.notify_one();
+//     }
+
+//     void pop() {
+//         std::unique_lock<std::mutex> lock(mx);
+//         cv.wait(lock, [this]() { return head != nullptr; });
+
+//         Node* oldHead = head;
+//         head = head->next;
+//         sizee.fetch_sub(1, std::memory_order_release);
+//         lock.unlock();
+
+//         delete oldHead;
+//     }
+
+//     std::optional<T> top() const {
+//         std::lock_guard<std::mutex> lock(mx);
+//         if (!head) {
+//             return std::nullopt;
+//         }
+//         return head->data;
+//     }
+
+//     bool try_pop(T& result) {
+//         std::lock_guard<std::mutex> lock(mx);
+//         if (!head) {
+//             return false;
+//         }
+//         Node* oldHead = head;
+//         result = oldHead->data;
+//         head = oldHead->next;
+//         sizee.fetch_sub(1, std::memory_order_release);
+
+//         delete oldHead;
+//         return true;
+//     }
+
+//     bool empty() const {
+//         return sizee.load(std::memory_order_acquire) == 0;
+//     }
+
+//     size_t size() const {
+//         return sizee.load(std::memory_order_acquire);
+//     }
+// };
 
 
-#include <mutex>
-#include <condition_variable>
-#include <optional>
-#include <atomic>
-
-template<typename T>
-class ThreadSafeStack {
-private:
-    struct Node {
-        T data;
-        Node* next;
-        Node(const T& value) : data(value), next(nullptr) {}
-    };
-
-    Node* head;
-    mutable std::mutex mx;
-    std::condition_variable cv;
-    std::atomic<size_t> sizee;
-
-public:
-    ThreadSafeStack() : head(nullptr), sizee(0) {}
-
-    ~ThreadSafeStack() {
-        std::lock_guard<std::mutex> lock(mx);
-        while (head) {
-            Node* tmp = head;
-            head = head->next;
-            delete tmp;
-        }
-    }
-
-    void push(const T& value) {
-        Node* newNode = new Node(value);
-        {
-            std::lock_guard<std::mutex> lock(mx);
-            newNode->next = head;
-            head = newNode;
-            sizee.fetch_add(1, std::memory_order_release);
-        }
-        cv.notify_one();
-    }
-
-    void pop() {
-        std::unique_lock<std::mutex> lock(mx);
-        cv.wait(lock, [this]() { return head != nullptr; });
-
-        Node* oldHead = head;
-        head = head->next;
-        sizee.fetch_sub(1, std::memory_order_release);
-        lock.unlock();
-
-        delete oldHead;
-    }
-
-    std::optional<T> top() const {
-        std::lock_guard<std::mutex> lock(mx);
-        if (!head) {
-            return std::nullopt;
-        }
-        return head->data;
-    }
-
-    bool try_pop(T& result) {
-        std::lock_guard<std::mutex> lock(mx);
-        if (!head) {
-            return false;
-        }
-        Node* oldHead = head;
-        result = oldHead->data;
-        head = oldHead->next;
-        sizee.fetch_sub(1, std::memory_order_release);
-
-        delete oldHead;
-        return true;
-    }
-
-    bool empty() const {
-        return sizee.load(std::memory_order_acquire) == 0;
-    }
-
-    size_t size() const {
-        return sizee.load(std::memory_order_acquire);
-    }
-};
 
 
 // DOUBLY LINKED LIST
@@ -197,5 +192,13 @@ public:
 // };
 
 int main() {
+	std::chrono::time_point timeStart = std::chrono::steady_clock::now();
+	std::this_thread::sleep_for(std::chrono::milliseconds(120));
+	
+	std::chrono::time_point timeEnd = std::chrono::steady_clock::now();
+	
+	std::chrono::milliseconds duration = std::chrono::duration_cast<std::chrono::milliseconds>(timeEnd - timeStart) ;
+	cout<<duration.count()<<endl;
+	
 	return 0;
 }
