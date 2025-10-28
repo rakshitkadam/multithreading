@@ -7,49 +7,90 @@ using namespace std;
 
 class Foo {
 private:
-    mutex mtx;
-    condition_variable cv;
-    int state;  // 0 = first, 1 = second, 2 = third
+	mutex mtx;
+	condition_variable cv;
+	int state;  // 0 = first, 1 = second, 2 = third
 
 public:
-    Foo() : state(0) {}
+	Foo() : state(0) {}
 
-    void first() {
-        unique_lock<mutex> lock(mtx);
-        cv.wait(lock, [this](){return state == 0;});
-        cout << "first\n";
-        state = 1;
-        cv.notify_all();
-    }
+	void first() {
+		unique_lock<mutex> lock(mtx);
+		cv.wait(lock, [this](){return state == 0;});
+		cout << "first\n";
+		state = 1;
+		cv.notify_all();
+	}
 
-    void second() {
-        unique_lock<mutex> lock(mtx);
-        cv.wait(lock, [this](){ return state == 1; });
-        cout << "second\n";
-        state = 2;
-        cv.notify_all();
-    }
+	void second() {
+		unique_lock<mutex> lock(mtx);
+		cv.wait(lock, [this](){ return state == 1; });
+		cout << "second\n";
+		state = 2;
+		cv.notify_all();
+	}
 
-    void third() {
-        unique_lock<mutex> lock(mtx);
-        cv.wait(lock, [this](){ return state == 2; });
-        cout << "third\n";
-    }
+	void third() {
+		unique_lock<mutex> lock(mtx);
+		cv.wait(lock, [this](){ return state == 2; });
+		cout << "third\n";
+	}
 };
 
+
+// USING SEMAPHORES
+// #include<semaphore>
+// class Foo 
+// {
+// 	public:
+// 	counting_semaphore<>s{0};
+// 	counting_semaphore<>t{0};
+// 	mutex printmx;
+// 	void first() 
+// 	{
+		
+// 		std::this_thread::sleep_for(chrono::microseconds(400));
+		
+// 		{
+// 			lock_guard<mutex>lock(printmx);
+// 			cout<<"#1"<<endl;
+// 		}
+// 		s.release();
+// 	}
+	
+// 	void second() 
+// 	{
+// 		s.acquire();
+// 		std::this_thread::sleep_for(chrono::microseconds(100));
+		
+// 		{
+// 			lock_guard<mutex>lock(printmx);
+// 			cout<<"#2"<<endl;
+// 		}
+// 		t.release();
+// 	}
+	
+// 	void third()
+// 	{
+// 		t.acquire();
+// 		std::this_thread::sleep_for(chrono::microseconds(10));
+// 		cout<<"#3"<<endl;
+
+// 	}
+// };
 int main() {
-    Foo foo;
+	Foo foo;
 
-    thread t1(&Foo::first, &foo);
-    thread t2(&Foo::second, &foo);
-    thread t3(&Foo::third, &foo);
+	thread t1(&Foo::first, &foo);
+	thread t2(&Foo::second, &foo);
+	thread t3(&Foo::third, &foo);
 
-    // Start them in any order
-    t3.join();
-    t2.join();
-    t1.join();
+	// Start them in any order
+	t3.join();
+	t2.join();
+	t1.join();
 
-    return 0;
+	return 0;
 }
 
 // How to extend it further to N : 

@@ -35,129 +35,137 @@
 
 using namespace std;
 
-class WebCrawler 
-{
-	public: 
-	int NUM_THREADS = 4;
-	unordered_map<string, bool>visited;
-	queue<string>queue;
-	mutex mx;
-	condition_variable cv;
-	atomic<int> activeThreads;
-	mutex fetchmx;
+// class WebCrawler 
+// {
+// 	public: 
+// 	int NUM_THREADS = 4;
+// 	unordered_map<string, bool>visited;
+// 	queue<string>queue;
+// 	mutex mx;
+// 	condition_variable cv;
+// 	atomic<int> activeThreads;
+// 	mutex fetchmx;
 	
-	// ----- extra variables for nice printing
-	unordered_map<thread::id, int> threadColorMap;
-	mutex colorMapMutex;
-	atomic<int> nextColorIndex{0};
-	const string RESET = "\033[0m";
-const vector<string> COLORS = {
-	"\033[31m", // Red
-	"\033[32m", // Green
-	"\033[33m", // Yellow
-	"\033[34m", // Blue
-	"\033[35m", // Magenta
-	"\033[36m", // Cyan
-	"\033[91m", // Bright Red
-	"\033[92m", // Bright Green
-	"\033[93m", // Bright Yellow
-	"\033[94m", // Bright Blue
-	"\033[95m", // Bright Magenta
-	"\033[96m"  // Bright Cyan
-};
-	WebCrawler() 
-	{
-		activeThreads.store(0);
+// 	// ----- extra variables for nice printing
+// 	unordered_map<thread::id, int> threadColorMap;
+// 	mutex colorMapMutex;
+// 	atomic<int> nextColorIndex{0};
+// 	const string RESET = "\033[0m";
+// const vector<string> COLORS = {
+// 	"\033[31m", // Red
+// 	"\033[32m", // Green
+// 	"\033[33m", // Yellow
+// 	"\033[34m", // Blue
+// 	"\033[35m", // Magenta
+// 	"\033[36m", // Cyan
+// 	"\033[91m", // Bright Red
+// 	"\033[92m", // Bright Green
+// 	"\033[93m", // Bright Yellow
+// 	"\033[94m", // Bright Blue
+// 	"\033[95m", // Bright Magenta
+// 	"\033[96m"  // Bright Cyan
+// };
+// 	WebCrawler() 
+// 	{
+// 		activeThreads.store(0);
 		
-	}
+// 	}
 	
-	vector<string> crawl(string startUrl) 
-	{
-		vector<thread>threads;
-		vector<string>urls;
-		{
-			lock_guard<mutex>lock(mx);
-			for(int i=0;i<NUM_THREADS;i++) 
-			{
-				threads.emplace_back(&WebCrawler::executeCrawl,this, std::ref(urls) );
-			}
+// 	vector<string> crawl(string startUrl) 
+// 	{
+// 		vector<thread>threads;
+// 		vector<string>urls;
+// 		{
+// 			lock_guard<mutex>lock(mx);
+// 			for(int i=0;i<NUM_THREADS;i++) 
+// 			{
+// 				threads.emplace_back(&WebCrawler::executeCrawl,this, std::ref(urls) );
+// 			}
 			
-			queue.push(startUrl);
-			visited[startUrl] = true;
-			cv.notify_all();
-		}
+// 			queue.push(startUrl);
+// 			visited[startUrl] = true;
+// 			cv.notify_all();
+// 		}
 		
-		for(thread& t: threads) if(t.joinable())t.join();
-		return urls;
-	}
+// 		for(thread& t: threads) if(t.joinable())t.join();
+// 		return urls;
+// 	}
 	
-	void executeCrawl(vector<string>& crawledStrings) 
-	{
-		while(true){
-		string url = "";
-		{
-			unique_lock<mutex>lock(mx);
-			cv.wait(lock, [this](){return !queue.empty() || activeThreads.load() == 0;});
-			if(queue.empty() && activeThreads.load() ==0) {
-				cv.notify_all();
-				return;
-			}
+// 	void executeCrawl(vector<string>& crawledStrings) 
+// 	{
+// 		while(true){
+// 		string url = "";
+// 		{
+// 			unique_lock<mutex>lock(mx);
+// 			cv.wait(lock, [this](){return !queue.empty() || activeThreads.load() == 0;});
+// 			if(queue.empty() && activeThreads.load() ==0) {
+// 				cv.notify_all();
+// 				return;
+// 			}
 			
-			activeThreads.fetch_add(1);
-			url = queue.front();
-			string color = getThreadColor();
-			cout << color<< "Thread worker #" << std::this_thread::get_id() << " executed crawl for url: " << url
-	 		<< RESET << endl;			
-			crawledStrings.push_back(url);
-			queue.pop();
-		}
+// 			activeThreads.fetch_add(1);
+// 			url = queue.front();
+// 			string color = getThreadColor();
+// 			cout << color<< "Thread worker #" << std::this_thread::get_id() << " executed crawl for url: " << url
+// 	 		<< RESET << endl;			
+// 			crawledStrings.push_back(url);
+// 			queue.pop();
+// 		}
 		
-		// fetch the urls on this page
-		const vector<string>urls = fetchForUrl(url);
-		{
-			lock_guard<mutex>lock(mx);
-			for(const string& curUrl: urls) 
-			{
-				if(visited.find(curUrl) !=visited.end()) continue;
-				visited[curUrl] = true;
-				queue.push(curUrl);
+// 		// fetch the urls on this page
+// 		const vector<string>urls = fetchForUrl(url);
+// 		{
+// 			lock_guard<mutex>lock(mx);
+// 			for(const string& curUrl: urls) 
+// 			{
+// 				if(visited.find(curUrl) !=visited.end()) continue;
+// 				visited[curUrl] = true;
+// 				queue.push(curUrl);
 			
-				cv.notify_one();
-			}
-			activeThreads.fetch_sub(1);
-		}
+// 				cv.notify_one();
+// 			}
+// 			activeThreads.fetch_sub(1);
+// 		}
 		
 			
-		}
-	}
-	vector<string> fetchForUrl(string& url)
-	{
-		lock_guard<mutex>lock(fetchmx);
-		vector<string> lists;
-		if(url.length()<7)
-		for(int i=0;i<10;i++) 
-		{
-			lists.emplace_back(url + to_string(i));
-		}
-		return lists;
-	}
-	string getThreadColor() {
-	thread::id tid = this_thread::get_id();
-	lock_guard<mutex> lock(colorMapMutex);
-	if (threadColorMap.find(tid) == threadColorMap.end()) {
-		threadColorMap[tid] = nextColorIndex++ % COLORS.size();
-	}
-	return COLORS[threadColorMap[tid]];
-}
-};
+// 		}
+// 	}
+// 	vector<string> fetchForUrl(string& url)
+// 	{
+// 		lock_guard<mutex>lock(fetchmx);
+// 		vector<string> lists;
+// 		if(url.length()<7)
+// 		for(int i=0;i<10;i++) 
+// 		{
+// 			lists.emplace_back(url + to_string(i));
+// 		}
+// 		return lists;
+// 	}
+// 	string getThreadColor() {
+// 	thread::id tid = this_thread::get_id();
+// 	lock_guard<mutex> lock(colorMapMutex);
+// 	if (threadColorMap.find(tid) == threadColorMap.end()) {
+// 		threadColorMap[tid] = nextColorIndex++ % COLORS.size();
+// 	}
+// 	return COLORS[threadColorMap[tid]];
+// }
+// };
 int main() 
 {
-	WebCrawler crawler;
-	vector<string>urls = crawler.crawl("-----");
+	// WebCrawler crawler;
+	// vector<string>urls = crawler.crawl("-----");
 	// for(string& url : urls) 
 	// {
 	// 	cout<<url<<endl;
 	// }
+	string sub = "raks";
+	string parent = "jras";
+	auto it = parent.find(sub);
+	if(it == string::npos) 
+	{
+		cout<<"Not found"<<endl;
+	}
+	else cout<<it<<endl;
 	return 0;
 }
 

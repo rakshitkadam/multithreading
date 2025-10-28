@@ -195,44 +195,98 @@
 
 using namespace std;
 
+// class ReaderWriter 
+// {
+// 	public : 
+	
+// 	vector<string>logs;
+// 	mutex mx;
+// 	condition_variable cv;
+// 	int readerCount = 0;
+// 	int writerCount = 0;
+// 	int writerActive = 0;
+// 	int readerActive = 0;
+// 	void writer_function(int writer_id, const std::string& message) 
+// 	{
+		
+// 		unique_lock<mutex>lock(mx);
+// 		writerActive++;
+// 		cv.wait(lock, [this](){return readerCount==0 && activeWriters;});
+// 		writerActive--;
+// 		writerCount++;
+// 		logs.push_back(message);
+// 		cout<<"Writer with id: "<<writer_id<<" writing"<<endl;
+// 		writerCount--;
+// 		cv.notify_all();
+		
+// 	}
+// 	void reader_function(int reader_id) 
+// 	{
+		
+// 		{
+// 		unique_lock<mutex>lock(mx);
+// 		cv.wait(lock, [this](){return !writerCount && !writerActive;});
+		
+// 		readerCount++;
+// 		for(string& message : logs) 
+// 			{
+// 				cout<<"reader with id: "<<reader_id<<" have read message: "<<message<<endl;
+// 			}
+// 		}
+// 		readerCount--;
+// 	}
+// };
+
+// READ PRIORITY
 class ReaderWriter 
 {
-	public : 
-	
+	public:
 	vector<string>logs;
 	mutex mx;
 	condition_variable cv;
-	int readerCount = 0;
-	int writerCount = 0;
-	int writerActive = 0;
-	int readerActive = 0;
-	void writer_function(int writer_id, const std::string& message) 
-	{
-		
-		unique_lock<mutex>lock(mx);
-		writerActive++;
-		cv.wait(lock, [this](){return readerCount==0 && activeWriters;});
-		writerActive--;
-		writerCount++;
-		logs.push_back(message);
-		cout<<"Writer with id: "<<writer_id<<" writing"<<endl;
-		writerCount--;
-		cv.notify_all();
-		
-	}
+	int readerCount=0;
+	int writerCount=0;
+	int readerWaiting=0;
+	int writerWaiting=0;
 	void reader_function(int reader_id) 
 	{
 		
 		{
-		unique_lock<mutex>lock(mx);
-		cv.wait(lock, [this](){return !writerCount && !writerActive;});
-		
-		readerCount++;
-		for(string& message : logs) 
+			unique_lock<mutex>lock(mx);
+			readerWaiting++;
+			cv.wait(lock, [this]()
 			{
-				cout<<"reader with id: "<<reader_id<<" have read message: "<<message<<endl;
-			}
+				return writerCount == 0;
+			});
+			readerWaiting--;
+			readerCount++;
 		}
-		readerCount--;
+		
+		for(auto it : logs) {
+			cout<<it<<" ";
+		}
+		cout<<endl;
+		
+		
+		{
+			lock_guard<mutex>lock(mx);
+			readerCount--;
+			cv.notify_all();
+		}
+	}
+	
+	void writer_function(int writer_id, string &message)
+	{
+		unique_lock<mutex>lock(mx);
+		writerWaiting++;
+		cv.wait(lock,[this]()
+		{
+			return readerCount == 0 && writerCount==0;
+		});
+		writerWaiting--;
+		writerCount++;
+		logs.push_back(message);
+		writerCount--;
+		cv.notify_all();
 	}
 };

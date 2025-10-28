@@ -9,84 +9,84 @@
 using namespace std;
 
 class BarberShop {
-    private: 
-    int maxChairs;
-    queue<int>waitingCustomers;
-    mutex mtx;
-    condition_variable barberCV, customerCV;
-    bool barberSleeping = true;
+	private: 
+	int maxChairs;
+	queue<int>waitingCustomers;
+	mutex mtx;
+	condition_variable barberCV, customerCV;
+	bool barberSleeping = true;
 
-    public:
-    BarberShop(int chairs) : maxChairs(chairs) {}
+	public:
+	BarberShop(int chairs) : maxChairs(chairs) {}
 
-    void customerArrives(int id) {
-        unique_lock<mutex> lock(mtx);
+	void customerArrives(int id) {
+		unique_lock<mutex> lock(mtx);
 
-        if (waitingCustomers.size() == maxChairs) {
-            cout << "Customer " << id << " leaves (no empty chairs)\n";
-            return;
-        }
+		if (waitingCustomers.size() == maxChairs) {
+			cout << "Customer " << id << " leaves (no empty chairs)\n";
+			return;
+		}
 
-        waitingCustomers.push(id);
-        cout << "Customer " << id << " waiting. Queue size: " << waitingCustomers.size() << "\n";
+		waitingCustomers.push(id);
+		cout << "Customer " << id << " waiting. Queue size: " << waitingCustomers.size() << "\n";
 
-        // Wake up the barber if he's sleeping
-        if (barberSleeping) {
-            barberSleeping = false;
-            barberCV.notify_one();
-        }
+		// Wake up the barber if he's sleeping
+		if (barberSleeping) {
+			barberSleeping = false;
+			barberCV.notify_one();
+		}
 
-        // Wait until the barber calls you
-        customerCV.wait(lock, [&]() {
-            return waitingCustomers.front() == id;
-        });
+		// Wait until the barber calls you
+		customerCV.wait(lock, [&]() {
+			return waitingCustomers.front() == id;
+		});
 
-        waitingCustomers.pop();
-        cout << "Customer " << id << " getting haircut\n";
-        lock.unlock();
+		waitingCustomers.pop();
+		cout << "Customer " << id << " getting haircut\n";
+		lock.unlock();
 
-        // Simulate haircut time
-        this_thread::sleep_for(chrono::milliseconds(400 + rand() % 400));
-        cout << "Customer " << id << " done!\n";
-    }
+		// Simulate haircut time
+		this_thread::sleep_for(chrono::milliseconds(400 + rand() % 400));
+		cout << "Customer " << id << " done!\n";
+	}
 
-    void barberWork() {
+	void barberWork() {
 
-        while (true) {
-            unique_lock<mutex> lock(mtx);
-            barberSleeping = true;
-            // Wait for customers if none are present
-            barberCV.wait(lock, [&]() { return !waitingCustomers.empty(); });
-            barberSleeping = false;
-            int next = waitingCustomers.front();
-            cout << "Barber calls customer " << next << "\n";
+		while (true) {
+			unique_lock<mutex> lock(mtx);
+			barberSleeping = true;
+			// Wait for customers if none are present
+			barberCV.wait(lock, [&]() { return !waitingCustomers.empty(); });
+			barberSleeping = false;
+			int next = waitingCustomers.front();
+			cout << "Barber calls customer " << next << "\n";
 
-            // Signal the next waiting customer
-            customerCV.notify_all();
-            lock.unlock();
+			// Signal the next waiting customer
+			customerCV.notify_all();
+			lock.unlock();
 
-            // Simulate haircut
-            this_thread::sleep_for(chrono::milliseconds(500 + rand() % 500));
-        }
-    }
+			// Simulate haircut
+			this_thread::sleep_for(chrono::milliseconds(500 + rand() % 500));
+		}
+	}
 };
 
-int main() {
-    srand(time(0));
-    BarberShop shop(3);  // 3 waiting chairs
+// int main() {
+// 	srand(time(0));
+// 	BarberShop shop(3);  // 3 waiting chairs
 
-    thread barber(&BarberShop::barberWork, &shop);
+// 	thread barber(&BarberShop::barberWork, &shop);
 
-    // Generate customers periodically
-    vector<thread> customers;
-    for (int i = 0; i < 10; ++i) {
-        this_thread::sleep_for(chrono::milliseconds(200 + rand() % 300));
-        customers.emplace_back(&BarberShop::customerArrives, &shop, i);
-    }
+// 	// Generate customers periodically
+// 	vector<thread> customers;
+// 	for (int i = 0; i < 10; ++i) {
+// 		this_thread::sleep_for(chrono::milliseconds(200 + rand() % 300));
+// 		customers.emplace_back(&BarberShop::customerArrives, &shop, i);
+// 	}
 
-    for (auto& c : customers) c.join();
-    barber.detach(); // runs indefinitely
-}
+// 	for (auto& c : customers) c.join();
+// 	barber.detach(); // runs indefinitely
+// }
 
 
 //NOTE THAT THIS IS BRUTE FORCE VIA NOTIFY_ALL, WE CAN IMPROVE THIS USING NOTIFY_ONE AND MAINTAINING CV FOR EACH CUSTOMER
@@ -203,3 +203,81 @@ int main() {
 // }
 
 
+
+// ## Practise 1 
+
+// #include<bits/stdc++.h>
+// #include<mutex>
+// #include<condition_variable>
+
+// using namespace std;
+
+// class BarberShop 
+// {
+// 	public : 
+// 	struct Customer 
+// 	{
+// 		int id;
+// 		mutex mx;
+// 		condition_variable cv;
+// 		bool done;
+// 	};
+	
+// 	int chairs;
+// 	queue<shared_ptr<Customer>>queue;
+// 	mutex mx;
+// 	condition_variable bcv;
+	
+// 	BarberShop (int chairs) : chairs(chairs) 
+// 	{
+		
+// 	}
+	
+// 	void customerArrives(int customerId) 
+// 	{
+// 		shared_ptr<Customer> ptr;
+// 		{
+// 			unique_lock<mutex>lock(mx);
+// 			if(static_cast<int>(queue.size()) == chairs) {
+// 				cout<<"Customer with id # "<<customerId<<" left without waiting"<<endl; 
+// 				return ;
+// 			}
+// 			ptr = make_shared<Customer>();
+// 			ptr->id = customerId;
+// 			ptr->done = false;
+// 			queue.push(ptr);
+// 			bcv.notify_one();
+// 		}
+		
+// 		unique_lock<mutex>lock(ptr->mx);
+		
+// 		ptr->cv.wait(lock, [this, ptr](){return ptr->done == true; });
+
+// 		// Any thing pending when work done, print here
+// 		cout<<"Customer with id # "<<customerId<<" Done "<<endl; 
+// 	}
+// 	void barberWork() 
+// 	{
+		
+// 		while(true) 
+// 		{
+// 			shared_ptr<Customer>cust;
+// 			{
+// 				unique_lock<mutex>lock(mx);
+// 				bcv.wait(lock, [this](){return !queue.empty();});
+// 				cust = queue.front();
+// 				queue.pop();
+// 				cout<<"Customer with id # "<<cust->id<<" having haircut "<<endl; 
+
+// 			}
+// 			// simulate haircut 
+			
+// 			{
+// 			 unique_lock<mutex>lock(cust->mx);
+// 			cust->done = true;
+// 			cust->cv.notify_one();
+// 			}
+// 		}
+		
+// 	}
+// };

@@ -12,14 +12,13 @@ class ZeroEvenOdd {
       counting_semaphore<1> semEven;
       counting_semaphore<1> semOdd;
       counting_semaphore<1> semZero;
-      
-
+	  
 
     public :
-    
+	
     ZeroEvenOdd(int n) : semEven(0), semOdd(0), semZero(1), num(n), turn(0) {
     }
-    
+	
     void printEven() {
 
        for(int i=2;i<=num;i+=2) {
@@ -28,7 +27,7 @@ class ZeroEvenOdd {
          semZero.release();
        }
     }
-    
+	
     void printOdd() {
 
         for(int i=1;i<=num;i+=2) {
@@ -55,15 +54,15 @@ class ZeroEvenOdd {
 };
 
 int main() {
-    ZeroEvenOdd obj(9);
+	ZeroEvenOdd obj(9);
 
-    vector<thread>threads;
-    threads.emplace_back(&ZeroEvenOdd::printOdd,&obj);
-    threads.emplace_back(&ZeroEvenOdd::printEven,&obj);
-    threads.emplace_back(&ZeroEvenOdd::printZero,&obj);
+	vector<thread>threads;
+	threads.emplace_back(&ZeroEvenOdd::printOdd,&obj);
+	threads.emplace_back(&ZeroEvenOdd::printEven,&obj);
+	threads.emplace_back(&ZeroEvenOdd::printZero,&obj);
 
-    for(thread& t : threads) {
-        t.join();
-    }
-    return 0;
+	for(thread& t : threads) {
+		t.join();
+	}
+	return 0;
 }
